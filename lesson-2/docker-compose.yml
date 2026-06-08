@@ -105,6 +105,6 @@ services:
       - ./data/victoria:/victoria-metrics-data
     command:
       - "-storageDataPath=/victoria-metrics-data"
-      - "-retentionPeriod=12M"
+      - "-retentionPeriod=2W"
       - "-dedup.minScrapeInterval=15s"
     restart: unless-stopped
