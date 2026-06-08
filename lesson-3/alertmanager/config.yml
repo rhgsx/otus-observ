@@ -1,0 +1,40 @@
+route:
+  group_by: [alertname, instance]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 48h
+  receiver: blackhole
+
+  routes:
+    - receiver: telegram_alerts
+      match: { severity: critical }
+    - receiver: email_alerts
+      match: { severity: warning }
+
+receivers:
+  - name: blackhole
+  - name: telegram_alerts
+    telegram_configs:
+      - bot_token: TELEGRAM_BOT_TOKEN
+        chat_id: -1234567890
+        send_resolved: true
+        message: |-
+          {{ if eq .Status "firing" }}АЛЕРТ{{ else }}РЕШЕНО{{ end }}
+          Алерт: {{ .GroupLabels.alertname }}
+          {{ range .Alerts }}
+          Хост: {{ .Labels.instance }}
+          Описание: {{ .Annotations.description }}
+          Степень важности: {{ .Labels.severity }}
+          {{ end }}
+
+  - name: email_alerts
+    email_configs:
+      - to: send_to@domain.ru
+        from: send_from@domain.ru
+        smarthost: smtp.domain.ru:587
+        auth_username: send_from@domain.ru
+        auth_password: YOUR_SMTP_PASSWORD
+        auth_identity: send_from@domain.ru
+        send_resolved: true
+        headers:
+          subject: "[{{ .Status | toUpper }}] Алерт: {{ .GroupLabels.alertname }}"

@@ -1,0 +1,47 @@
+groups:
+  - name: NodeExporter
+    rules:
+      - alert: HostDown
+        expr: up{job="node"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Хост {{ $labels.instance }} недоступен"
+          description: "Node Exporter на {{ $labels.instance }} не отвечает более 3 минут."
+
+      - alert: HostHighCpuLoad
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая загрузка CPU на {{ $labels.instance }}"
+          description: "Загрузка CPU превышает 85% уже 5 минут. Текущее значение: {{ $value | humanize }}%."
+
+      - alert: HostOutOfMemory
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100) < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Мало оперативной памяти на {{ $labels.instance }}"
+          description: "Свободной оперативной памяти осталось меньше 10%. Текущее значение: {{ $value | humanize }}%."
+
+      - alert: HostOomKillDetected
+        expr: increase(node_vmstat_oom_kill[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OOM Killer сработал на {{ $labels.instance }}"
+          description: "OOM killer сработал в течение последних 5 минут."
+
+      - alert: HostOutOfDiskSpace
+        expr: sum(node_filesystem_avail_bytes) by(instance) / sum(node_filesystem_size_bytes) by(instance) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Заканчивается место на диске: {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          description: "Свободное место на разделе {{ $labels.mountpoint }} упало ниже 15%. Текущее значение: {{ $value | humanize }}%."
