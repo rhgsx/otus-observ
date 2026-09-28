@@ -1,0 +1,5 @@
+- [Lesson 1 - Установка и настройка Prometheus, использование exporters](https://github.com/rhgsx/otus-observ/tree/main/lesson-1)
+- [Lesson 2 - Хранилище метрик](https://github.com/rhgsx/otus-observ/tree/main/lesson-2)
+- [Lesson 3 - Настройка алертинга](https://github.com/rhgsx/otus-observ/tree/main/lesson-3)
+- [Lesson 4 - Формирование dashboard на основе данных с Grafana](https://github.com/rhgsx/otus-observ/tree/main/lesson-4)
+- [Lesson 5 - LLD и оповещения Zabbix](https://github.com/rhgsx/otus-observ/tree/main/lesson-5)
