@@ -1,0 +1,73 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./data/prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    depends_on:
+      - node-exporter
+      - mysqld-exporter
+      - nginx-exporter
+      - php-fpm-exporter
+      - blackbox-exporter
+    restart: unless-stopped
+
+  victoria-metrics:
+    image: victoriametrics/victoria-metrics:latest
+    ports:
+      - "8428:8428"
+    volumes:
+      - ./data/victoria:/victoria-metrics-data
+    command:
+      - "-storageDataPath=/victoria-metrics-data"
+      - "-retentionPeriod=2W"
+      - "-dedup.minScrapeInterval=15s"
+    restart: unless-stopped
+
+  vmalert:
+    image: victoriametrics/vmalert:latest
+    ports:
+      - "8880:8880"
+    volumes:
+      - ./vmalert:/etc/rules
+    command:
+      - "-rule=/etc/rules/*.yml"
+      - "-datasource.url=http://victoria-metrics:8428"
+      - "-notifier.url=http://alertmanager:9093"
+      - "-remoteWrite.url=http://victoria-metrics:8428"
+      - "-remoteRead.url=http://victoria-metrics:8428"
+    restart: unless-stopped
+  
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/config.yml:/etc/alertmanager/config.yml
+      - ./data/alertmanager:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    user: "472:472"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+      - victoria-metrics
+    restart: unless-stopped

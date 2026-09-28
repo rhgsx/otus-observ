@@ -1,0 +1,7 @@
+version: '3.8'
+
+include:
+  - _compose_app.yml
+  - _compose_exporters.yml
+  - _compose_monitoring.yml
+  - _compose_zabbix.yml

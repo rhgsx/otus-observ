@@ -1,0 +1,42 @@
+services:
+  node-exporter:
+    image: prom/node-exporter:latest
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter:latest
+    volumes:
+      - ./prometheus/mysql.conf:/.my.cnf
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    command:
+      - -nginx.scrape-uri=http://nginx:80/stub_status
+    depends_on:
+      - nginx
+    restart: unless-stopped
+
+  php-fpm-exporter:
+    image: hipages/php-fpm_exporter:latest
+    environment:
+      PHP_FPM_SCRAPE_URI: "tcp://wordpress:9000/status"
+    depends_on:
+      - wordpress
+    restart: unless-stopped
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    restart: unless-stopped
