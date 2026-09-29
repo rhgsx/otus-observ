@@ -1,0 +1,36 @@
+dbrp "telegraf"."autogen"
+
+var name = 'Nginx 5xx ошибки'
+var triggerType = 'threshold'
+var warn = 0.0
+var crit = 9.0
+
+stream
+    |from()
+        .measurement('nginx_access')
+    |window()
+        .period(1m)
+        .every(1m)
+    |sum('is_5xx')
+        .as('errors')
+    |eval(lambda: float("errors"))
+        .as('value')
+    |alert()
+        .id('{{ .TaskName }}')
+        .message('{{ .Level }}: nginx вернул {{ printf "%.0f" (index .Fields "value") }} ответов 5xx за минуту')
+        .warn(lambda: "value" > warn)
+        .crit(lambda: "value" > crit)
+        .idTag('alertID')
+        .levelTag('level')
+        .messageField('message')
+        .durationField('duration')
+        .stateChangesOnly()
+        .log('/var/lib/kapacitor/alerts.log')
+        .topic('cms')
+    |influxDBOut()
+        .create()
+        .database('chronograf')
+        .retentionPolicy('autogen')
+        .measurement('alerts')
+        .tag('alertName', name)
+        .tag('triggerType', triggerType)

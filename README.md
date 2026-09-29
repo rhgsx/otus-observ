@@ -3,3 +3,4 @@
 - [Lesson 3 - Настройка алертинга](https://github.com/rhgsx/otus-observ/tree/main/lesson-3)
 - [Lesson 4 - Формирование dashboard на основе данных с Grafana](https://github.com/rhgsx/otus-observ/tree/main/lesson-4)
 - [Lesson 5 - LLD и оповещения Zabbix](https://github.com/rhgsx/otus-observ/tree/main/lesson-5)
+- [Lesson 6 - Установка и настройка TICK стека](https://github.com/rhgsx/otus-observ/tree/main/lesson-6)

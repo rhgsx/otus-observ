@@ -1,0 +1,38 @@
+dbrp "telegraf"."autogen"
+
+var name = 'Использование CPU %'
+var triggerType = 'threshold'
+var warn = 80.0
+var crit = 90.0
+
+stream
+    |from()
+        .measurement('cpu')
+        .where(lambda: "cpu" == 'cpu-total')
+        .groupBy('host')
+    |window()
+        .period(1m)
+        .every(1m)
+    |mean('usage_idle')
+        .as('idle')
+    |eval(lambda: 100.0 - "idle")
+        .as('value')
+    |alert()
+        .id('{{ .TaskName }}/{{ index .Tags "host" }}')
+        .message('{{ .Level }}: CPU на {{ index .Tags "host" }} загружен на {{ printf "%.1f" (index .Fields "value") }}%')
+        .warn(lambda: "value" > warn)
+        .crit(lambda: "value" > crit)
+        .idTag('alertID')
+        .levelTag('level')
+        .messageField('message')
+        .durationField('duration')
+        .stateChangesOnly()
+        .log('/var/lib/kapacitor/alerts.log')
+        .topic('cms')
+    |influxDBOut()
+        .create()
+        .database('chronograf')
+        .retentionPolicy('autogen')
+        .measurement('alerts')
+        .tag('alertName', name)
+        .tag('triggerType', triggerType)

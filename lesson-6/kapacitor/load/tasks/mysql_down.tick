@@ -1,0 +1,28 @@
+dbrp "telegraf"."autogen"
+
+var name = 'MariaDB недоступна'
+var triggerType = 'deadman'
+
+stream
+    |from()
+        .measurement('mysql')
+    |deadman(0.0, 1m)
+        .id('mysql_down')
+        .message('{{ if eq .Level "OK" }}OK: MariaDB снова работает{{ else }}{{ .Level }}: MariaDB не отвечает больше минуты{{ end }}')
+        .idTag('alertID')
+        .levelTag('level')
+        .messageField('message')
+        .durationField('duration')
+        .stateChangesOnly()
+        .log('/var/lib/kapacitor/alerts.log')
+        .topic('cms')
+    |eval(lambda: float("emitted"))
+        .as('value')
+        .keep()
+    |influxDBOut()
+        .create()
+        .database('chronograf')
+        .retentionPolicy('autogen')
+        .measurement('alerts')
+        .tag('alertName', name)
+        .tag('triggerType', triggerType)

@@ -1,0 +1,37 @@
+dbrp "telegraf"."autogen"
+
+var name = 'Число подключений к MariaDB'
+var triggerType = 'threshold'
+var warn = 100.0
+var crit = 130.0
+
+stream
+    |from()
+        .measurement('mysql')
+        .groupBy('server')
+    |window()
+        .period(1m)
+        .every(1m)
+    |max('threads_connected')
+        .as('connected')
+    |eval(lambda: float("connected"))
+        .as('value')
+    |alert()
+        .id('{{ .TaskName }}/{{ index .Tags "server" }}')
+        .message('{{ .Level }}: к MariaDB {{ printf "%.0f" (index .Fields "value") }} подключений')
+        .warn(lambda: "value" > warn)
+        .crit(lambda: "value" > crit)
+        .idTag('alertID')
+        .levelTag('level')
+        .messageField('message')
+        .durationField('duration')
+        .stateChangesOnly()
+        .log('/var/lib/kapacitor/alerts.log')
+        .topic('cms')
+    |influxDBOut()
+        .create()
+        .database('chronograf')
+        .retentionPolicy('autogen')
+        .measurement('alerts')
+        .tag('alertName', name)
+        .tag('triggerType', triggerType)

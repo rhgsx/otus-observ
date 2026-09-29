@@ -1,0 +1,30 @@
+dbrp "telegraf"."autogen"
+
+var name = 'Доступность сайта'
+var triggerType = 'threshold'
+
+stream
+    |from()
+        .measurement('http_response')
+        .groupBy('server')
+    |eval(lambda: if(isPresent("response_time"), "response_time", 0.0), lambda: "result_code", lambda: if(isPresent("http_response_code"), "http_response_code", 0))
+        .as('value', 'result_code', 'http_code')
+    |alert()
+        .id('{{ .TaskName }}/{{ index .Tags "server" }}')
+        .message('{{ .Level }}: {{ index .Tags "server" }} — результат {{ index .Tags "result" }}, HTTP {{ index .Fields "http_code" }}, ответ за {{ printf "%.2f" (index .Fields "value") }} с')
+        .crit(lambda: "result_code" != 0)
+        .warn(lambda: "value" > 2.0)
+        .idTag('alertID')
+        .levelTag('level')
+        .messageField('message')
+        .durationField('duration')
+        .stateChangesOnly()
+        .log('/var/lib/kapacitor/alerts.log')
+        .topic('cms')
+    |influxDBOut()
+        .create()
+        .database('chronograf')
+        .retentionPolicy('autogen')
+        .measurement('alerts')
+        .tag('alertName', name)
+        .tag('triggerType', triggerType)

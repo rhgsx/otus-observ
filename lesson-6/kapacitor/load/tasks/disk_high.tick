@@ -1,0 +1,35 @@
+dbrp "telegraf"."autogen"
+
+var name = 'Заполненность каждого раздела диска %'
+var triggerType = 'threshold'
+var warn = 80.0
+var crit = 90.0
+
+stream
+    |from()
+        .measurement('disk')
+        .groupBy('host', 'path')
+    |window()
+        .period(1m)
+        .every(1m)
+    |last('used_percent')
+        .as('value')
+    |alert()
+        .id('{{ .TaskName }}/{{ index .Tags "host" }}{{ index .Tags "path" }}')
+        .message('{{ .Level }}: раздел {{ index .Tags "path" }} на {{ index .Tags "host" }} заполнен на {{ printf "%.1f" (index .Fields "value") }}%')
+        .warn(lambda: "value" > warn)
+        .crit(lambda: "value" > crit)
+        .idTag('alertID')
+        .levelTag('level')
+        .messageField('message')
+        .durationField('duration')
+        .stateChangesOnly()
+        .log('/var/lib/kapacitor/alerts.log')
+        .topic('cms')
+    |influxDBOut()
+        .create()
+        .database('chronograf')
+        .retentionPolicy('autogen')
+        .measurement('alerts')
+        .tag('alertName', name)
+        .tag('triggerType', triggerType)

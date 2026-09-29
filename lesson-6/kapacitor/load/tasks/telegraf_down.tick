@@ -1,0 +1,28 @@
+dbrp "telegraf"."autogen"
+
+var name = 'Telegraf недоступен'
+var triggerType = 'deadman'
+
+stream
+    |from()
+        .measurement('cpu')
+    |deadman(0.0, 1m)
+        .id('telegraf_down')
+        .message('{{ if eq .Level "OK" }}OK: Telegraf (сбор метрик) снова работает{{ else }}{{ .Level }}: Telegraf (сбор метрик) не отвечает больше минуты{{ end }}')
+        .idTag('alertID')
+        .levelTag('level')
+        .messageField('message')
+        .durationField('duration')
+        .stateChangesOnly()
+        .log('/var/lib/kapacitor/alerts.log')
+        .topic('cms')
+    |eval(lambda: float("emitted"))
+        .as('value')
+        .keep()
+    |influxDBOut()
+        .create()
+        .database('chronograf')
+        .retentionPolicy('autogen')
+        .measurement('alerts')
+        .tag('alertName', name)
+        .tag('triggerType', triggerType)

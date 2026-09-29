@@ -1,0 +1,35 @@
+dbrp "telegraf"."autogen"
+
+var name = 'Использование оперативной памяти хоста %'
+var triggerType = 'threshold'
+var warn = 85.0
+var crit = 95.0
+
+stream
+    |from()
+        .measurement('mem')
+        .groupBy('host')
+    |window()
+        .period(1m)
+        .every(1m)
+    |mean('used_percent')
+        .as('value')
+    |alert()
+        .id('{{ .TaskName }}/{{ index .Tags "host" }}')
+        .message('{{ .Level }}: RAM на {{ index .Tags "host" }} занята на {{ printf "%.1f" (index .Fields "value") }}%')
+        .warn(lambda: "value" > warn)
+        .crit(lambda: "value" > crit)
+        .idTag('alertID')
+        .levelTag('level')
+        .messageField('message')
+        .durationField('duration')
+        .stateChangesOnly()
+        .log('/var/lib/kapacitor/alerts.log')
+        .topic('cms')
+    |influxDBOut()
+        .create()
+        .database('chronograf')
+        .retentionPolicy('autogen')
+        .measurement('alerts')
+        .tag('alertName', name)
+        .tag('triggerType', triggerType)

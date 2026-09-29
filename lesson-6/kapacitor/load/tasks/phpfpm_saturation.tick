@@ -1,0 +1,38 @@
+dbrp "telegraf"."autogen"
+
+var name = 'Загрузка пула php-fpm'
+var triggerType = 'threshold'
+var maxChildren = 10.0   // = pm.max_children в php/zz-status.conf
+var warn = 80.0
+var crit = 95.0
+
+stream
+    |from()
+        .measurement('phpfpm')
+        .groupBy('pool')
+    |window()
+        .period(1m)
+        .every(1m)
+    |max('active_processes')
+        .as('active')
+    |eval(lambda: 100.0 * float("active") / maxChildren)
+        .as('value')
+    |alert()
+        .id('{{ .TaskName }}/{{ index .Tags "pool" }}')
+        .message('{{ .Level }}: пул php-fpm {{ index .Tags "pool" }} занят на {{ printf "%.0f" (index .Fields "value") }}%')
+        .warn(lambda: "value" > warn)
+        .crit(lambda: "value" > crit)
+        .idTag('alertID')
+        .levelTag('level')
+        .messageField('message')
+        .durationField('duration')
+        .stateChangesOnly()
+        .log('/var/lib/kapacitor/alerts.log')
+        .topic('cms')
+    |influxDBOut()
+        .create()
+        .database('chronograf')
+        .retentionPolicy('autogen')
+        .measurement('alerts')
+        .tag('alertName', name)
+        .tag('triggerType', triggerType)
