@@ -1,0 +1,29 @@
+name: cms-vm
+
+metricbeat.modules:
+  - module: system
+    period: 10s
+    metricsets: [cpu, load, memory, network, filesystem]
+
+  - module: nginx
+    period: 10s
+    metricsets: [stubstatus]
+    hosts: ["http://nginx:80"]
+    server_status_path: "nginx_status"
+
+  - module: mysql
+    period: 10s
+    metricsets: [status]
+    hosts: ["metricbeat:metricbeat_password@tcp(db:3306)/"]
+
+  - module: php_fpm
+    period: 10s
+    metricsets: [pool, process]
+    hosts: ["http://nginx:80"]
+    status_path: "/fpm_status"
+
+processors:
+  - add_host_metadata: ~
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]

@@ -1,0 +1,22 @@
+name: elk-vm
+
+heartbeat.monitors:
+  - type: http
+    id: cms-web
+    name: WordPress (nginx)
+    schedule: '@every 10s'
+    urls: ["http://nginx:80/"]
+    max_redirects: 3
+    check.response.status: [200]
+
+  - type: tcp
+    id: cms-db
+    name: MariaDB port
+    schedule: '@every 10s'
+    hosts: ["db:3306"]
+
+processors:
+  - add_observer_metadata: ~
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]

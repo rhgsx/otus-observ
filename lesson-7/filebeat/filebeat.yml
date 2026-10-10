@@ -1,0 +1,30 @@
+name: cms-vm
+
+filebeat.modules:
+  - module: nginx
+    access:
+      enabled: true
+      var.paths: ["/var/log/nginx/access.log*"]
+    error:
+      enabled: true
+      var.paths: ["/var/log/nginx/error.log*"]
+
+  - module: mysql
+    error:
+      enabled: true
+      var.paths: ["/var/log/mysql/error.log*"]
+    slowlog:
+      enabled: true
+      var.paths: ["/var/log/mysql/slow.log*"]
+
+filebeat.inputs:
+  - type: filestream
+    id: php-fpm
+    paths: ["/var/log/php-fpm/*.log"]
+    tags: ["php-fpm"]
+
+processors:
+  - add_host_metadata: ~
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]

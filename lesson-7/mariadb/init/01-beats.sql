@@ -1,0 +1,3 @@
+CREATE USER IF NOT EXISTS 'metricbeat'@'%' IDENTIFIED BY 'metricbeat_password';
+GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'metricbeat'@'%';
+FLUSH PRIVILEGES;
