@@ -5,3 +5,4 @@
 - [Lesson 5 - LLD и оповещения Zabbix](https://github.com/rhgsx/otus-observ/tree/main/lesson-5)
 - [Lesson 6 - Установка и настройка TICK стека](https://github.com/rhgsx/otus-observ/tree/main/lesson-6)
 - [Lesson 7 - Установка и настройка Elastic Stack (ELK + Beats)](https://github.com/rhgsx/otus-observ/tree/main/lesson-7)
+- [Lesson 8 - Logstash и Vector](https://github.com/rhgsx/otus-observ/tree/main/lesson-8)

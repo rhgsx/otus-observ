@@ -1,0 +1,34 @@
+filebeat.inputs:
+  - type: filestream
+    id: nginx-access
+    paths: ["/var/log/nginx/access.log"]
+    fields:
+      log_type: nginx_access
+
+  - type: filestream
+    id: nginx-error
+    paths: ["/var/log/nginx/error.log"]
+    fields:
+      log_type: nginx_error
+
+  - type: filestream
+    id: php-access
+    paths: ["/var/log/php-fpm/access.log"]
+    fields:
+      log_type: php_access
+
+  - type: filestream
+    id: php-error
+    paths: ["/var/log/php-fpm/error.log"]
+    fields:
+      log_type: php_error
+
+  - type: filestream
+    id: mysql-error
+    paths: ["/var/log/mysql/error.log"]
+    fields:
+      log_type: mysql_error
+
+output.logstash:
+  # hosts: ["logstash:5044"]
+  hosts: ["vector:5044"]

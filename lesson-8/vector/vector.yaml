@@ -1,0 +1,33 @@
+sources:
+  filebeat:
+    type: logstash
+    address: 0.0.0.0:5044
+
+transforms:
+  parse:
+    type: remap
+    inputs: [filebeat]
+    source: |
+      if .fields.log_type == "nginx_access" {
+        . = merge(., parse_nginx_log!(.message, "combined"))
+      } else if .fields.log_type == "nginx_error" {
+        . = merge(., parse_nginx_log!(.message, "error"))
+      } else if .fields.log_type == "php_access" {
+        . = merge(., parse_regex!(.message, r'^(?P<client_ip>\S+) -\s+(?P<time>\S+ \S+) "(?P<method>\S+) (?P<url>[^"]*)" (?P<status>\d+)'))
+        .status = to_int!(.status)
+        .timestamp = parse_timestamp!(del(.time), "%d/%b/%Y:%H:%M:%S %z")
+      } else if .fields.log_type == "php_error" {
+        . = merge(., parse_regex!(.message, r'^\[(?P<time>[^\]]+)\] (?P<level>\w+): (?P<error>.*)'))
+        .timestamp = parse_timestamp!(del(.time), "%d-%b-%Y %H:%M:%S")
+      } else if .fields.log_type == "mysql_error" {
+        . = merge(., parse_regex!(.message, r'^(?P<time>\S+ \S+) (?P<thread>\d+) \[(?P<level>\w+)\] (?P<error>.*)'))
+        .timestamp = parse_timestamp!(del(.time), "%Y-%m-%d %H:%M:%S")
+      }
+
+sinks:
+  elasticsearch:
+    type: elasticsearch
+    inputs: [parse]
+    endpoints: ["http://elasticsearch:9200"]
+    bulk:
+      index: "cms-vector-%Y.%m.%d"
