@@ -1,0 +1,42 @@
+cms-pipeline:
+  source:
+    http:
+      port: 2021
+      path: "/log/ingest"
+      ssl: false
+
+  processor:
+    - grok:
+        grok_when: '/log_type == "nginx_access"'
+        match:
+          message: ['%{IPORHOST:client_ip} - %{NOTSPACE:user} \[%{HTTPDATE:time}\] "%{WORD:method} %{DATA:url} HTTP/%{NUMBER:http_version}" %{NUMBER:status:int} %{NUMBER:bytes:int} "%{DATA:referrer}" "%{DATA:agent}"']
+    - grok:
+        grok_when: '/log_type == "nginx_error"'
+        match:
+          message: ['%{DATA:time} \[%{LOGLEVEL:level}\] %{NUMBER:pid}#%{NUMBER}: %{GREEDYDATA:error}']
+    - grok:
+        grok_when: '/log_type == "php_access"'
+        match:
+          message: ['%{IPORHOST:client_ip} -\s+%{HTTPDATE:time} "%{WORD:method} %{DATA:url}" %{NUMBER:status:int}']
+    - grok:
+        grok_when: '/log_type == "php_error"'
+        match:
+          message: ['\[%{DATA:time}\] %{LOGLEVEL:level}: %{GREEDYDATA:error}']
+    - grok:
+        grok_when: '/log_type == "mysql_error"'
+        match:
+          message: ['%{TIMESTAMP_ISO8601:time} %{NUMBER:thread} \[%{WORD:level}\] %{GREEDYDATA:error}']
+
+    - date:
+        match:
+          - key: time
+            patterns: ["dd/MMM/yyyy:HH:mm:ss Z", "yyyy/MM/dd HH:mm:ss", "dd-MMM-yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss"]
+        destination: "@timestamp"
+        locale: "en"
+    - delete_entries:
+        with_keys: ["time"]
+
+  sink:
+    - opensearch:
+        hosts: ["http://opensearch:9200"]
+        index: "cms-dataprepper-%{yyyy.MM.dd}"
