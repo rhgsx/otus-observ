@@ -1,0 +1,14 @@
+server_url: "http://graylog:9000/api/"
+
+server_api_token: "i9dqt1l7faiqhnp0mahgq54j02j61d7c40ofieboj5br0q1m73"
+
+node_id: "file:/var/lib/graylog-sidecar/node-id"
+
+node_name: "cms-vm"
+
+list_log_files:
+  - "/var/log/nginx"
+  - "/var/log/php-fpm"
+  - "/var/log/mysql"
+
+tags: []
