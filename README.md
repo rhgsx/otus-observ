@@ -8,3 +8,4 @@
 - [Lesson 8 - Logstash и Vector](https://github.com/rhgsx/otus-observ/tree/main/lesson-8)
 - [Lesson 9 - OpenSearch, Data Prepper и Fluent Bit](https://github.com/rhgsx/otus-observ/tree/main/lesson-9)
 - [Lesson 10 - Graylog и Sidecar](https://github.com/rhgsx/otus-observ/tree/main/lesson-10)
+- [Lesson 11 - Grafana Loki](https://github.com/rhgsx/otus-observ/tree/main/lesson-11)
