@@ -1,0 +1,109 @@
+x-galera: &galera
+  image: mariadb:10.11
+  environment:
+    MARIADB_ROOT_PASSWORD: root_password
+    MARIADB_DATABASE: wordpress
+    MARIADB_USER: wordpress
+    MARIADB_PASSWORD: wordpress_password
+  healthcheck:
+    test: ["CMD-SHELL", "mariadb -uroot -p$$MARIADB_ROOT_PASSWORD -e \"SHOW STATUS LIKE 'wsrep_ready'\" | grep -q ON"]
+    interval: 10s
+    timeout: 5s
+    retries: 30
+  stop_grace_period: 1m
+  restart: unless-stopped
+
+x-consul: &consul
+  image: hashicorp/consul:1.22
+  restart: unless-stopped
+
+services:
+  galera1:
+    <<: *galera
+    hostname: galera1
+    entrypoint: ["bash", "-c", "grep -qs 'safe_to_bootstrap: 0' /var/lib/mysql/grastate.dat && exec docker-entrypoint.sh mariadbd \"$$@\" || exec docker-entrypoint.sh mariadbd --wsrep-new-cluster \"$$@\"", "--"]
+    command: ["--wsrep-node-name=galera1"]
+    volumes:
+      - ./data/galera1:/var/lib/mysql
+      - ./galera/galera.cnf:/etc/mysql/conf.d/galera.cnf:ro
+      - ./galera/init:/docker-entrypoint-initdb.d:ro
+
+  galera2:
+    <<: *galera
+    hostname: galera2
+    command: ["--wsrep-node-name=galera2"]
+    volumes:
+      - ./data/galera2:/var/lib/mysql
+      - ./galera/galera.cnf:/etc/mysql/conf.d/galera.cnf:ro
+    depends_on:
+      galera1:
+        condition: service_healthy
+
+  galera3:
+    <<: *galera
+    hostname: galera3
+    command: ["--wsrep-node-name=galera3"]
+    volumes:
+      - ./data/galera3:/var/lib/mysql
+      - ./galera/galera.cnf:/etc/mysql/conf.d/galera.cnf:ro
+    depends_on:
+      galera2:
+        condition: service_healthy
+
+  consul1:
+    <<: *consul
+    command: ["agent", "-node=db1"]
+    volumes:
+      - ./consul/server.hcl:/consul/config/server.hcl:ro
+      - ./consul/galera1.json:/consul/config/galera.json:ro
+      - ./data/consul1:/consul/data
+    ports:
+      - "8500:8500"
+
+  consul2:
+    <<: *consul
+    command: ["agent", "-node=db2"]
+    volumes:
+      - ./consul/server.hcl:/consul/config/server.hcl:ro
+      - ./consul/galera2.json:/consul/config/galera.json:ro
+      - ./data/consul2:/consul/data
+
+  consul3:
+    <<: *consul
+    command: ["agent", "-node=db3"]
+    volumes:
+      - ./consul/server.hcl:/consul/config/server.hcl:ro
+      - ./consul/galera3.json:/consul/config/galera.json:ro
+      - ./data/consul3:/consul/data
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter:latest
+    volumes:
+      - ./mysqld-exporter/my.cnf:/.my.cnf:ro
+    restart: unless-stopped
+
+  node-exporter-db:
+    image: prom/node-exporter:latest
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+  vector-db:
+    image: timberio/vector:0.59.0-alpine
+    volumes:
+      - ./vector/vector.yaml:/etc/vector/vector.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+
+networks:
+  default:
+    name: infra
+    external: true

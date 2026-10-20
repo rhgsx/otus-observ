@@ -1,0 +1,4 @@
+CREATE USER IF NOT EXISTS 'exporter'@'%' IDENTIFIED BY 'exporter_password';
+GRANT PROCESS, REPLICATION CLIENT, SLAVE MONITOR, SELECT ON *.* TO 'exporter'@'%';
+
+CREATE USER IF NOT EXISTS 'haproxy'@'%';

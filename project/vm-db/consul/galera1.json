@@ -1,0 +1,13 @@
+{
+  "service": {
+    "name": "galera",
+    "id": "galera1",
+    "address": "galera1",
+    "port": 3306,
+    "check": {
+      "tcp": "galera1:3306",
+      "interval": "5s",
+      "timeout": "2s"
+    }
+  }
+}

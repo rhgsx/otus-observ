@@ -1,0 +1,30 @@
+sources:
+  docker:
+    type: docker_logs
+    include_labels: ["com.docker.compose.project=vm-app"]
+
+transforms:
+  parse:
+    type: remap
+    inputs: [docker]
+    source: |
+      .service = .label."com.docker.compose.service"
+      if .service == "nginx" {
+        . = merge(., parse_nginx_log(.message, "main") ?? parse_nginx_log(.message, "error") ?? {})
+      } else if .service == "wordpress" {
+        . = merge(., parse_regex(.message, r'^(?P<client_ip>\S+) -\s+\S+ \S+ "(?P<method>\S+) (?P<url>[^"]*)" (?P<status>\d+)') ?? parse_regex(.message, r'^\[[^\]]+\] (?P<level>\w+): (?P<error>.*)') ?? {})
+      } else if .service == "consul-agent" {
+        . = merge(., parse_regex(.message, r'^\S+ \[(?P<level>\w+)\]\s+(?P<msg>.*)') ?? {})
+      }
+      del(.label)
+
+sinks:
+  loki:
+    type: loki
+    inputs: [parse]
+    endpoint: "http://loki:3100"
+    encoding:
+      codec: json
+    labels:
+      vm: app
+      service: "{{ service }}"

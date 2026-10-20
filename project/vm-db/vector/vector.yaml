@@ -1,0 +1,28 @@
+sources:
+  docker:
+    type: docker_logs
+    include_labels: ["com.docker.compose.project=vm-db"]
+
+transforms:
+  parse:
+    type: remap
+    inputs: [docker]
+    source: |
+      .service = .label."com.docker.compose.service"
+      if starts_with(string!(.service), "galera") {
+        . = merge(., parse_regex(.message, r'^\S+ \S+ \d+ \[(?P<level>\w+)\] (?P<msg>.*)') ?? {})
+      } else if starts_with(string!(.service), "consul") {
+        . = merge(., parse_regex(.message, r'^\S+ \[(?P<level>\w+)\]\s+(?P<msg>.*)') ?? {})
+      }
+      del(.label)
+
+sinks:
+  loki:
+    type: loki
+    inputs: [parse]
+    endpoint: "http://loki:3100"
+    encoding:
+      codec: json
+    labels:
+      vm: db
+      service: "{{ service }}"

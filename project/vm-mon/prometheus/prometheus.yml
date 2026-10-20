@@ -1,0 +1,75 @@
+global:
+  scrape_interval: 15s
+  external_labels:
+    site: prod
+
+remote_write:
+  - url: "http://victoria-metrics:8428/api/v1/write"
+
+scrape_configs:
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter-db:9100']
+        labels: { vm: db }
+      - targets: ['node-exporter-app:9100']
+        labels: { vm: app }
+      - targets: ['node-exporter-mon:9100']
+        labels: { vm: mon }
+
+  - job_name: 'mysql'
+    metrics_path: /probe
+    static_configs:
+      - targets: ['galera1:3306', 'galera2:3306', 'galera3:3306']
+        labels: { vm: db }
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: mysqld-exporter:9104
+
+  - job_name: 'consul'
+    metrics_path: /v1/agent/metrics
+    params:
+      format: [prometheus]
+    static_configs:
+      - targets: ['consul1:8500', 'consul2:8500', 'consul3:8500']
+        labels: { vm: db }
+      - targets: ['consul-agent:8500']
+        labels: { vm: app }
+
+  - job_name: 'haproxy'
+    static_configs:
+      - targets: ['haproxy:8404']
+        labels: { vm: app }
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+        labels: { vm: app }
+
+  - job_name: 'php-fpm'
+    static_configs:
+      - targets: ['php-fpm-exporter:9253']
+        labels: { vm: app }
+
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://nginx:80
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: 'monitoring'
+    static_configs:
+      - targets: ['prometheus:9090', 'victoria-metrics:8428', 'vmalert:8880', 'alertmanager:9093', 'loki:3100', 'grafana:3000']
+        labels: { vm: mon }

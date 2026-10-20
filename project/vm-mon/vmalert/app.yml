@@ -1,0 +1,55 @@
+groups:
+  - name: App
+    rules:
+      - alert: SiteDown
+        expr: probe_success{job="blackbox"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Сайт {{ $labels.instance }} недоступен"
+          description: "Blackbox не получает 2xx от сайта больше минуты."
+
+      - alert: SiteSlow
+        expr: probe_duration_seconds{job="blackbox"} > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Сайт {{ $labels.instance }} отвечает медленно"
+          description: "Время ответа {{ $value | humanize }}s."
+
+      - alert: NoDatabaseBackends
+        expr: haproxy_backend_active_servers{proxy="galera"} + haproxy_backend_backup_servers{proxy="galera"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "У HAProxy нет живых нод Galera"
+          description: "WordPress не может подключиться к базе."
+
+      - alert: PhpFpmMaxChildrenReached
+        expr: increase(phpfpm_max_children_reached[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "php-fpm упёрся в pm.max_children"
+          description: "Запросы встают в очередь, надо поднимать max_children или масштабировать."
+
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} {{ $labels.instance }} не отдаёт метрики"
+          description: "Prometheus не может снять метрики с {{ $labels.instance }} ({{ $labels.vm }}) больше 2 минут."
+
+      - alert: ConsulNoLeader
+        expr: max(consul_server_isLeader{job="consul"}) < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "В кластере Consul нет лидера"
+          description: "consul-template не получит обновления списка нод Galera."

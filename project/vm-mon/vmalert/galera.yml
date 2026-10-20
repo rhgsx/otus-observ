@@ -1,0 +1,47 @@
+groups:
+  - name: Galera
+    rules:
+      - alert: GaleraNodeDown
+        expr: mysql_up{job="mysql"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Нода Galera {{ $labels.instance }} недоступна"
+          description: "mysqld-exporter не может подключиться к {{ $labels.instance }} больше минуты."
+
+      - alert: GaleraClusterDegraded
+        expr: mysql_global_status_wsrep_cluster_size < 3
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "В кластере Galera меньше 3 нод"
+          description: "{{ $labels.instance }} видит кластер из {{ $value }} нод."
+
+      - alert: GaleraNodeNotSynced
+        expr: mysql_global_status_wsrep_local_state != 4
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Нода {{ $labels.instance }} не в состоянии Synced"
+          description: "wsrep_local_state = {{ $value }} уже 5 минут (4 - Synced)."
+
+      - alert: GaleraNodeNotReady
+        expr: mysql_global_status_wsrep_ready != 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Нода {{ $labels.instance }} не принимает запросы"
+          description: "wsrep_ready = 0, нода не в primary компоненте."
+
+      - alert: GaleraFlowControl
+        expr: mysql_global_status_wsrep_flow_control_paused > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Flow control на {{ $labels.instance }}"
+          description: "Репликация притормаживается {{ $value | humanizePercentage }} времени, какая-то нода не успевает."
